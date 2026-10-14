@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الدرس 2 - قلب الأوراق</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #d9a56c;
+      font-family: Tahoma, sans-serif;
+      color: #5a3a1e;
+    }
+
+    .game {
+      width: 100%;
+      max-width: 390px;
+      height: 700px;
+      max-height: 96vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      border-radius: 30px;
+      padding: 16px;
+      box-sizing: border-box;
+      background: linear-gradient(#f8dfb8, #eab883);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+    }
+    .box {
+      background: #fff3dc;
+      border: 3px solid white;
+      border-radius: 30px;
+      padding: 8px 16px;
+    }
+
+    .center {
+      margin: auto 0;
+      text-align: center;
+    }
+    .center h2 {
+      margin: 0 0 18px;
+      font-size: 22px;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .card {
+      height: 100px;
+      border: 4px solid white;
+      border-radius: 16px;
+      background: #c9742b;
+      color: white;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1.3;
+      padding: 4px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);   /* باش الكتابة تبان فكل لون */
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .card::after { content: "?"; font-size: 32px; }
+    .card.flipped { transform: scale(1.05); }
+    .card.flipped::after { content: ""; }
+
+    /* شاشة النهاية (مخبية فالأول) */
+    #result {
+      display: none;
+      margin: auto 0;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      line-height: 2;
+      background: #fff3dc;
+      border: 4px solid white;
+      border-radius: 24px;
+    }
+    .big { font-size: 40px; }
+    .main-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 14px;
+      font-size: 20px;
+      font-family: inherit;
+      color: white;
+      background: #c9742b;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+  </style>
+  <link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+  <div class="game">
+
+    <div class="top">
+      <div class="box">المحاولات: <span id="moves">0</span> / <span id="maxText"></span></div>
+      <div class="box">💎 <span id="earned">0</span></div>
+    </div>
+
+    <!-- اللعبة -->
+    <div class="center" id="gameArea">
+      <h2>لقا الأوراق المرتبطين (بنفس اللون)</h2>
+      <div id="board"></div>
+    </div>
+
+    <!-- شاشة النهاية (نجاح / خسارة / سالاو القلوب) -->
+    <div id="result">
+      <div class="big" id="bigText"></div>
+      <div id="resultText"></div>
+      <button class="main-btn" onclick="window.location.href='index.html'">رجوع للخريطة</button>
+      <button class="main-btn" id="replayBtn" onclick="window.location.reload()">عاود اللعب</button>
+    </div>
+  </div>
+
+  <script src="progress.js"></script>
+  <script>
+    // ============================================
+    //  الإعدادات: تقدر تبدلهم
+    // ============================================
+
+    // الأجواج: كل جوج عندو لون وكتابتين (الورقة الأولى والورقة التانية)
+    // باش تبدل: غير الكلام اللي بين "" . وباش تزيد جوج: زيد سطر جديد
+    const pairs = [
+      { color: "#e74c3c", first: "Alibaba",             second: "Jack Ma" },
+      { color: "#3498db", first: "Jan Koum",            second: "WhatsApp" },
+      { color: "#2ecc71", first: "Mohamed El Ghaissani", second: "Youcan" },
+      { color: "#e6a817", first: "Walt Disney",         second: "Disney" },
+      { color: "#9b59b6", first: "Amine Raghib",        second: "Mohtarif" },
+      { color: "#e0527f", first: "Coco Chanel",         second: "Gabrielle Chanel" }
+    ];
+
+    const diamondsPerPair = 10;   // الألماس ديال كل جوج صحيح
+    const maxMoves = 12;          // عدد المحاولات المسموحة (كتسالي اللعبة ملي كيسالاو)
+
+
+    // ============================================
+    //  المتغيرات
+    // ============================================
+    let firstCard = null;   // الورقة الأولى اللي تقلبات
+    let locked = false;     // واش كنتسناو الأوراق ترجع
+    let moves = 0;          // عدد المحاولات
+    let matches = 0;        // عدد الجوجات اللي لقى
+
+
+    // كتصايب الأوراق وكتخلطهم
+    function startGame() {
+      document.getElementById("maxText").textContent = maxMoves;
+      const board = document.getElementById("board");
+
+      // كنصايبو لائحة الأوراق: من كل جوج كنديرو جوج أوراق
+      const list = [];
+      for (let i = 0; i < pairs.length; i++) {
+        list.push({ pair: i, color: pairs[i].color, text: pairs[i].first });
+        list.push({ pair: i, color: pairs[i].color, text: pairs[i].second });
+      }
+
+      // كنخلطوهم
+      list.sort(function () { return Math.random() - 0.5; });
+
+      // كنصايبو زر لكل ورقة (كنحفظو فيها رقم الجوج واللون والكتابة)
+      for (const item of list) {
+        const card = document.createElement("button");
+        card.className = "card";
+        card.dataset.pair = item.pair;
+        card.dataset.color = item.color;
+        card.dataset.text = item.text;
+        card.onclick = function () { flipCard(card); };
+        board.appendChild(card);
+      }
+    }
+
+
+    // كتخدم ملي كنضغطو على ورقة
+    function flipCard(card) {
+      if (locked || card.classList.contains("flipped")) return;
+
+      showCard(card);
+
+      // الورقة الأولى: كنتسناو التانية
+      if (firstCard === null) {
+        firstCard = card;
+        return;
+      }
+
+      // الورقة التانية: كنزيدو محاولة
+      moves = moves + 1;
+      document.getElementById("moves").textContent = moves;
+
+      if (firstCard.dataset.pair === card.dataset.pair) {
+        // نفس الجوج: لقا جوج صحيح!
+        matches = matches + 1;
+        addDiamonds(diamondsPerPair);
+        document.getElementById("earned").textContent = matches * diamondsPerPair;
+        firstCard = null;
+
+        // إلا لقا كلشي أو سالاو المحاولات: كنبينو النتيجة
+        if (matches === pairs.length || moves >= maxMoves) {
+          setTimeout(showResult, 700);
+        }
+      } else {
+        // ألوان مختلفة: كنتسناو نص ثانية وكنرجعو الجوج
+        locked = true;
+        const oldCard = firstCard;
+        firstCard = null;
+        setTimeout(function () {
+          hideCard(oldCard);
+          hideCard(card);
+          locked = false;
+
+          // إلا سالاو المحاولات: كنبينو النتيجة
+          if (moves >= maxMoves) {
+            showResult();
+          }
+        }, 800);
+      }
+    }
+
+
+    function showCard(card) {
+      card.classList.add("flipped");
+      card.style.background = card.dataset.color;
+      card.textContent = card.dataset.text;        // كنبينو الكتابة
+    }
+
+    function hideCard(card) {
+      card.classList.remove("flipped");
+      card.style.background = "";
+      card.textContent = "";                       // كنخبيو الكتابة
+    }
+
+
+    // كتحسب النسبة (الجوجات اللي لقى): نجح ولا خسر
+    function showResult() {
+      const percent = matches / pairs.length * 100;
+      const stars = endLevel(2, percent);      // 0 = خسر | 1 و2 و3 = نجح
+      const resultLine = "لقيتي " + matches + " من " + pairs.length + " جوجات";
+
+      if (stars > 0) {
+        showEnd("★".repeat(stars) + "☆".repeat(3 - stars),
+                "🎉 نجحتي!<br>" + resultLine + "<br>ربحتي " + (matches * diamondsPerPair) + " 💎",
+                false);
+      } else {
+        const hearts = getHearts();
+        let message = "😢 خسرتي الدرس<br>" + resultLine + "<br>فقدتي قلب 💔";
+        if (hearts > 0) {
+          message = message + "<br>باقي ليك " + hearts + " ❤️";
+        } else {
+          message = message + "<br>سالاو ليك القلوب! ستنى ساعة";
+        }
+        showEnd("💔", message, hearts > 0);
+      }
+    }
+
+
+    // كتبين شاشة النهاية
+    function showEnd(big, message, canReplay) {
+      document.getElementById("gameArea").style.display = "none";
+      document.getElementById("result").style.display = "block";
+      document.getElementById("bigText").textContent = big;
+      document.getElementById("resultText").innerHTML = message;
+      document.getElementById("replayBtn").style.display = canReplay ? "block" : "none";
+    }
+
+
+    // كنبداو: إلا سالاو القلوب ما كندخلوش اللعبة
+    if (getHearts() === 0) {
+      showEnd("💔", "ما بقاو ليك قلوب.<br>رجع من بعد ساعة (العداد فـ الخريطة)", false);
+    } else {
+      startGame();
+    }
+  </script>
+</body>
+</html>

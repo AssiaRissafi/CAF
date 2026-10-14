@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>خريطة المراجعة</title>
+
+  <style>
+    /* ===== الجسم والشاشة ===== */
+    body {
+      margin: 0;
+      background: #d9a56c;
+      font-family: Tahoma, sans-serif;
+      color: #5a3a1e;
+    }
+
+    .game {
+      position: relative;
+      width: 390px;
+      height: 840px;
+      margin: 0 auto;
+      overflow: hidden;
+      background: linear-gradient(#f8dfb8, #eab883);
+    }
+
+    /* ===== الشريط الفوقاني ===== */
+    .top {
+      display: flex;
+      justify-content: space-between;
+      padding: 16px;
+    }
+    .box {
+      background: #fff3dc;
+      border: 3px solid white;
+      border-radius: 30px;
+      padding: 8px 16px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* عداد القلوب: فوق على اليسار (كيبان غير ملي القلوب كيسالاو) */
+    .timer {
+      display: none;
+      position: absolute;
+      left: 16px;
+      top: 72px;
+      z-index: 5;
+      padding: 6px 14px;
+      font-size: 18px;
+      background: #fff3dc;
+      border: 3px solid white;
+      border-radius: 30px;
+    }
+
+    /* ===== الخريطة ===== */
+    .map {
+      position: absolute;
+      top: 70px;
+      left: 0;
+      width: 390px;
+      height: 700px;
+    }
+    .map svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    /* ===== الليفل ===== */
+    .level {
+      position: absolute;
+      width: 70px;
+      transform: translate(-50%, -50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      color: #5a3a1e;
+    }
+    .stars {
+      display: block;
+      font-size: 20px;
+      color: #ffb400;
+    }
+    .circle {
+      display: block;
+      width: 62px;
+      height: 62px;
+      line-height: 62px;
+      margin: 0 auto;
+      border-radius: 50%;
+      border: 4px solid white;
+      background: #c9742b;
+      color: white;
+      font-size: 28px;
+    }
+    .locked .circle {
+      background: #f1dcc0;
+      color: #5a3a1e;
+    }
+    .locked .circle::after {
+      content: "🔒";
+      font-size: 18px;
+    }
+
+    .emoji {
+      position: absolute;
+      font-size: 40px;
+    }
+
+    /* ===== زر القوانين ===== */
+    .rules-btn {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 4px solid white;
+      background: #ffc93c;
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    /* ===== نافذة القوانين ===== */
+    .rules {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(90, 58, 30, 0.6);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .rules-card {
+      width: 310px;
+      padding: 24px;
+      background: #fff3dc;
+      border-radius: 24px;
+      direction: rtl;
+      text-align: right;
+      line-height: 1.9;
+    }
+    .rules-card button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 10px;
+      border: none;
+      border-radius: 30px;
+      background: #c9742b;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+    }
+  </style>
+  <link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+  <div class="game">
+
+    <!-- الشريط الفوقاني -->
+    <div class="top">
+      <div class="box" onclick="history.back()">‹</div>
+      <div class="box">❤️ <span id="hearts">5</span></div>
+      <div class="box">💎 <span id="diamonds">0</span></div>
+    </div>
+
+    <!-- عداد القلوب -->
+    <div class="timer" id="timer"></div>
+
+    <!-- الخريطة -->
+    <div class="map">
+      <svg width="390" height="700">
+        <path d="M 110 590 C 250 590, 340 530, 290 430 C 245 345, 90 380, 100 280 C 108 195, 230 215, 270 120"
+              fill="none" stroke="#fff8ec" stroke-width="72" stroke-linecap="round"/>
+      </svg>
+
+      <button class="emoji" onclick="restartGame()" style="left: 110px; top: 70px; background: none; border: none; padding: 0; cursor: pointer;">🎁</button>
+
+      <button class="level" data-level="1" style="left: 110px; top: 590px;">
+        <span class="stars">☆☆☆</span><span class="circle">1</span>
+      </button>
+
+      <button class="level" data-level="2" style="left: 290px; top: 430px;">
+        <span class="stars">☆☆☆</span><span class="circle">2</span>
+      </button>
+
+      <button class="level" data-level="3" style="left: 100px; top: 280px;">
+        <span class="stars">☆☆☆</span><span class="circle">3</span>
+      </button>
+
+      <button class="level" data-level="4" style="left: 270px; top: 120px;">
+        <span class="stars">☆☆☆</span><span class="circle">4</span>
+      </button>
+    </div>
+
+    <!-- زر القوانين -->
+    <button class="rules-btn" onclick="openRules()">?</button>
+
+    <!-- نافذة القوانين: بدل الكلام اللي بغيتي هنا -->
+    <div class="rules" id="rules">
+      <div class="rules-card">
+        <h2>قوانين اللعبة</h2>
+        <ol>
+          <li>أكمل الدروس بالترتيب لفتح المستويات الجديدة.</li>
+          <li>باش تنجح فالدرس خاصك تجاوب على أكثر من 50%.</li>
+          <li>إلا خسرتي الدرس كتفقد قلب (عندك 5 قلوب).</li>
+          <li>إلا سالاو القلوب، ستنى ساعة (العداد فوق على اليسار) وكترجع ليك 5 قلوب.</li>
+          <li>كل جواب صحيح كيعطيك 10 💎.</li>
+        </ol>
+        <button onclick="closeRules()">فهمت!</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="progress.js"></script>
+  <script>
+    // شحال من ليفل مفتوح (الأول كيكون 1)
+    const unlocked = Number(localStorage.getItem("unlocked")) || 1;
+
+    // كنبينو الألماس المحفوظ
+    document.getElementById("diamonds").textContent = localStorage.getItem("diamonds") || 0;
+
+
+    // كنعدو على الليفلات كاملين
+    const allLevels = document.querySelectorAll(".level");
+
+    for (const level of allLevels) {
+      const number = Number(level.dataset.level);
+
+      // النجوم المحفوظة: مثلا 2 => ★★☆
+      const stars = Number(localStorage.getItem("stars" + number)) || 0;
+      level.querySelector(".stars").textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
+
+      // إلا كان مقفول كنزيدو ليه كلاس locked
+      if (number > unlocked) {
+        level.classList.add("locked");
+      }
+
+      // ملي كنضغطو على الليفل
+      level.addEventListener("click", function () {
+        if (number > unlocked) {
+          alert("خاصك تنجح فالدرس السابق أولاً");
+        } else if (getHearts() === 0) {
+          alert("سالاو ليك القلوب 💔 ستنى حتى يسالي العداد");
+        } else {
+          window.location.href = "lesson" + number + ".html";
+        }
+      });
+    }
+
+
+    // كتبين القلوب، وإلا سالاو كتبين العداد (كتعاود كل ثانية)
+    function showHeartsAndTimer() {
+      const hearts = getHearts();
+      const timer = document.getElementById("timer");
+
+      // كنبينو عدد القلوب (5 كيتكتب Full)
+      if (hearts === startHearts) {
+        document.getElementById("hearts").textContent = hearts + " Full";
+      } else {
+        document.getElementById("hearts").textContent = hearts;
+      }
+
+      // إلا باقي عندو قلوب كنخبيو العداد
+      if (hearts > 0) {
+        timer.style.display = "none";
+        return;
+      }
+
+      // إلا سالاو: كنحسبو الدقايق والثواني اللي بقاو
+      const secondsLeft = Math.ceil(getRefillLeft() / 1000);
+      const minutes = Math.floor(secondsLeft / 60);
+      const seconds = secondsLeft % 60;
+
+      timer.style.display = "block";
+      timer.textContent = "⏳ " + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    }
+
+    showHeartsAndTimer();
+    setInterval(showHeartsAndTimer, 1000);
+
+
+    // إلا رجعنا للخريطة بزر الرجوع ديال المتصفح، كنعاودو نحملو الصفحة باش تتحدث
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+
+    // الهدية 🎁: كتعاود اللعبة من الأول (الألماس 0، النجوم 0، القلوب 5)
+    function restartGame() {
+      if (confirm("واش بغيتي تعاود اللعبة من الأول؟\nغادي يتمسح الألماس والنجوم وكترجع القلوب 5")) {
+        resetProgress();              // الدالة كاينة فـ progress.js
+        window.location.reload();
+      }
+    }
+
+
+    // نافذة القوانين
+    function openRules() {
+      document.getElementById("rules").style.display = "flex";
+    }
+    function closeRules() {
+      document.getElementById("rules").style.display = "none";
+    }
+  </script>
+</body>
+</html>

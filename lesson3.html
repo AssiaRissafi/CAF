@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الدرس 3 - بوزل رائد الأعمال</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;       /* وسط من الطول */
+      justify-content: center;   /* وسط من العرض */
+      padding: 8px;
+      background: #d9a56c;
+      font-family: Tahoma, sans-serif;
+      color: #5a3a1e;
+    }
+
+    .game {
+      width: 100%;
+      max-width: 390px;
+      height: 700px;
+      max-height: 96vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      border-radius: 30px;
+      padding: 16px;
+      background: linear-gradient(#f8dfb8, #eab883);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 18px;
+    }
+    .box {
+      background: #fff3dc;
+      border: 3px solid white;
+      border-radius: 30px;
+      padding: 8px 16px;
+    }
+
+    .center {
+      margin: auto 0;
+      text-align: center;
+    }
+    .center h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+    }
+    .hint {
+      margin: 0 0 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* الإطار ديال البوزل (مربع) */
+    .board-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1;
+      margin: 0 auto;
+    }
+
+    /* الشبكة: القطع كيتحطو فيها */
+    #board {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      gap: 3px;
+      direction: ltr;     /* مهم: باش القطع كيتحطو من اليسار لليمين (الصفحة عربية RTL) */
+    }
+
+    /* كل قطعة هي صورة صغيرة */
+    .piece {
+      min-width: 0;
+      min-height: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      background-color: #f4d6ac;
+    }
+    .piece.selected {
+      outline: 4px solid #c9742b;      /* القطعة المختارة */
+      outline-offset: -4px;
+      transform: scale(0.94);
+    }
+
+    /* الصورة الكاملة (مخبية فالأول) */
+    #preview {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      border: 3px solid #c9742b;
+      border-radius: 6px;
+      object-fit: cover;
+      pointer-events: none;           /* باش الضغط يدوز عليها للقطع */
+    }
+
+    .main-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      font-size: 18px;
+      font-family: inherit;
+      color: white;
+      background: #c9742b;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+
+    /* شاشة النهاية (مخبية فالأول) */
+    #result {
+      display: none;
+      margin: auto 0;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      line-height: 2;
+      background: #fff3dc;
+      border: 4px solid white;
+      border-radius: 24px;
+    }
+    #resultText { font-size: 18px; }
+    .big { font-size: 40px; }
+  </style>
+  <link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+  <div class="game">
+
+    <!-- الشريط الفوقاني: الوقت + القطع الصحيحة -->
+    <div class="top">
+      <div class="box" dir="ltr">⏱ <span id="time">0</span></div>
+      <div class="box" dir="ltr">✅ <span id="correctCount">0</span> / <span id="totalCount">0</span></div>
+    </div>
+
+    <!-- اللعبة -->
+    <div class="center" id="gameArea">
+      <h2>رتب القطع باش تكمل صورة رائد الأعمال</h2>
+      <p class="hint">نوط على قطعة، ومن بعد على قطعة أخرى باش يبدلو البلاصة</p>
+
+      <div class="board-wrap">
+        <div id="board"></div>
+        <img id="preview" alt="الصورة الكاملة">
+      </div>
+
+      <button class="main-btn" id="previewBtn" type="button" onclick="togglePreview()">👁 شوف الصورة</button>
+    </div>
+
+    <!-- شاشة النهاية (نجاح / خسارة / سالاو القلوب) -->
+    <div id="result">
+      <div class="big" id="bigText"></div>
+      <div id="resultText"></div>
+      <button class="main-btn" type="button" onclick="window.location.href='index.html'">رجوع للخريطة</button>
+      <button class="main-btn" id="replayBtn" type="button" onclick="window.location.reload()">عاود اللعب</button>
+    </div>
+  </div>
+
+  <script src="progress.js"></script>
+  <script>
+    // ============================================
+    //  الإعدادات: تقدر تبدلهم
+    //  الصور خاصها تكون فـ دوسي aabb بهاد السميات:
+    //  1.jpeg  2.jpeg  ...  9.jpeg   (القطع)  و  full.jpeg  (الصورة الكاملة)
+    // ============================================
+    const imageFolder = "aabb";      // سمية الدوسي ديال الصور
+    const pieceExtension = ".jpeg";  // امتداد القطع (إلا كانو .jpg بدلها)
+    const fullImage = "full.jpeg";   // سمية الصورة الكاملة
+    const size = 3;                  // 3 = شبكة 3x3 (9 قطع)
+    const timeLimit = 120;           // الوقت بالثواني
+    const diamondsPerPiece = 10;     // الألماس ديال كل قطعة فبلاصتها الصحيحة
+
+
+    // ============================================
+    //  المتغيرات
+    // ============================================
+    const totalPieces = size * size;   // عدد القطع
+    let order = [];              // order[i] = رقم القطعة اللي فـ البلاصة i
+    let selected = null;         // البلاصة المختارة (null = حتى وحدة)
+    let timeLeft = timeLimit;    // الوقت اللي بقا
+    let timerId = null;          // الساعة
+    let finished = false;        // واش سالات اللعبة؟
+
+
+    // كتشوف واش الصور كاينين، وإلا لا كتعلمك (مرة وحدة)
+    function checkImages() {
+      let warned = false;
+      const names = [];
+      for (let i = 1; i <= totalPieces; i++) {
+        names.push(i + pieceExtension);
+      }
+      names.push(fullImage);
+
+      for (const name of names) {
+        const test = new Image();
+        test.onerror = function () {
+          if (!warned) {
+            warned = true;
+            alert("ما لقيتش الصورة: " + imageFolder + "/" + name + "\nتأكد من السمية ومن الدوسي " + imageFolder);
+          }
+        };
+        test.src = imageFolder + "/" + name;
+      }
+    }
+
+
+    // كتشوف واش الترتيب هو الترتيب الصحيح
+    function isSolvedOrder() {
+      for (let i = 0; i < totalPieces; i++) {
+        if (order[i] !== i) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+
+    // كتخلط القطع (وكتتأكد بلي ماشي مرتبين من الأول)
+    function shuffle() {
+      order = [];
+      for (let i = 0; i < totalPieces; i++) {
+        order.push(i);
+      }
+      do {
+        order.sort(function () { return Math.random() - 0.5; });
+      } while (isSolvedOrder());
+    }
+
+
+    // كتحسب شحال من قطعة فبلاصتها الصحيحة
+    function countCorrect() {
+      let count = 0;
+      for (let i = 0; i < totalPieces; i++) {
+        if (order[i] === i) {
+          count = count + 1;
+        }
+      }
+      return count;
+    }
+
+
+    // كترسم القطع فـ الشبكة
+    function drawBoard() {
+      const board = document.getElementById("board");
+      board.innerHTML = "";
+      board.style.gridTemplateColumns = "repeat(" + size + ", 1fr)";
+      board.style.gridTemplateRows = "repeat(" + size + ", 1fr)";
+
+      for (let slot = 0; slot < totalPieces; slot++) {
+        const pieceNumber = order[slot];     // شنو هي القطعة اللي فهاد البلاصة
+
+        // كل قطعة هي صورة: aabb/1.jpeg ... aabb/9.jpeg
+        const piece = document.createElement("div");
+        piece.className = "piece";
+        piece.style.backgroundImage = "url('" + imageFolder + "/" + (pieceNumber + 1) + pieceExtension + "')";
+
+        if (slot === selected) {
+          piece.classList.add("selected");
+        }
+
+        piece.onclick = function () { clickPiece(slot); };
+        board.appendChild(piece);
+      }
+
+      document.getElementById("correctCount").textContent = countCorrect();
+    }
+
+
+    // كتخدم ملي كنضغطو على قطعة
+    function clickPiece(slot) {
+      if (finished) return;
+
+      if (selected === null) {
+        selected = slot;                 // القطعة الأولى: كنختارها
+      } else if (selected === slot) {
+        selected = null;                 // ضغط على نفس القطعة: كنلغيو الاختيار
+      } else {
+        // القطعة التانية: كنبدلو البلاصة بين الجوج
+        const temp = order[selected];
+        order[selected] = order[slot];
+        order[slot] = temp;
+        selected = null;
+      }
+
+      drawBoard();
+
+      // إلا كلشي فبلاصتو: سالات اللعبة
+      if (isSolvedOrder()) {
+        try {
+          finishGame();
+        } catch (error) {
+          alert("فيه مشكل: " + error.message);
+        }
+      }
+    }
+
+
+    // كتبين / كتخبي الصورة الكاملة
+    function togglePreview() {
+      if (finished) return;
+      const preview = document.getElementById("preview");
+      const button = document.getElementById("previewBtn");
+
+      if (preview.style.display === "block") {
+        preview.style.display = "none";
+        button.textContent = "👁 شوف الصورة";
+      } else {
+        preview.style.display = "block";
+        button.textContent = "🙈 خبّي الصورة";
+      }
+    }
+
+
+    // الساعة: كتنقص ثانية كل ثانية
+    function tick() {
+      if (finished) return;
+      timeLeft = timeLeft - 1;
+      document.getElementById("time").textContent = timeLeft;
+      if (timeLeft <= 0) {
+        finishGame();
+      }
+    }
+
+
+    // كتسالي اللعبة: كتحسب النسبة، نجح ولا خسر
+    function finishGame() {
+      if (finished) return;
+      finished = true;
+      clearInterval(timerId);
+
+      const correct = countCorrect();
+      const percent = correct / totalPieces * 100;
+      const stars = endLevel(3, percent);      // 0 = خسر | 1 و2 و3 = نجح
+      const resultLine = "حطيتي " + correct + " من " + totalPieces + " قطع فبلاصتها";
+
+      // الألماس: على كل قطعة فبلاصتها
+      addDiamonds(correct * diamondsPerPiece);
+
+      if (stars > 0) {
+        showEnd("★".repeat(stars) + "☆".repeat(3 - stars),
+                "🎉 نجحتي!<br>" + resultLine + "<br>ربحتي " + (correct * diamondsPerPiece) + " 💎",
+                false);
+      } else {
+        const hearts = getHearts();
+        let message = "😢 ما وصلتيش لـ 50%<br>" + resultLine + "<br>فقدتي قلب 💔";
+        if (hearts > 0) {
+          message = message + "<br>باقي ليك " + hearts + " ❤️";
+        } else {
+          message = message + "<br>سالاو ليك القلوب! ستنى ساعة";
+        }
+        showEnd("💔", message, hearts > 0);
+      }
+    }
+
+
+    // كتبين شاشة النهاية
+    function showEnd(big, message, canReplay) {
+      document.getElementById("gameArea").style.display = "none";
+      document.getElementById("result").style.display = "block";
+      document.getElementById("bigText").textContent = big;
+      document.getElementById("resultText").innerHTML = message;
+      document.getElementById("replayBtn").style.display = canReplay ? "block" : "none";
+    }
+
+
+    // كنبداو: إلا سالاو القلوب ما كندخلوش اللعبة
+    if (getHearts() === 0) {
+      showEnd("💔", "ما بقاو ليك قلوب.<br>رجع من بعد ساعة (العداد فـ الخريطة)", false);
+    } else {
+      document.getElementById("totalCount").textContent = totalPieces;
+      document.getElementById("time").textContent = timeLeft;
+      document.getElementById("preview").src = imageFolder + "/" + fullImage;
+      checkImages();
+      shuffle();
+      drawBoard();
+      timerId = setInterval(tick, 1000);
+    }
+  </script>
+</body>
+</html>

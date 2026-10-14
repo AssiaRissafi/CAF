@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الدرس 4 - متاهة الطرق الأربعة</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;       /* وسط من الطول */
+      justify-content: center;   /* وسط من العرض */
+      padding: 8px;
+      background: #d9a56c;
+      font-family: Tahoma, sans-serif;
+      color: #5a3a1e;
+    }
+
+    .game {
+      width: 100%;
+      max-width: 390px;
+      height: 700px;
+      max-height: 96vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      border-radius: 30px;
+      padding: 16px;
+      background: linear-gradient(#f8dfb8, #eab883);
+    }
+
+    /* الشريط الفوقاني */
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 18px;
+    }
+    .box {
+      background: #fff3dc;
+      border: 3px solid white;
+      border-radius: 30px;
+      padding: 8px 16px;
+    }
+
+    .center {
+      margin: auto 0;
+      text-align: center;
+    }
+
+    /* الدوائر: كل دائرة = مفترق طرق */
+    .steps {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      direction: ltr;
+      margin-bottom: 12px;
+    }
+    .dot {
+      width: 30px;
+      height: 30px;
+      line-height: 24px;
+      border-radius: 50%;
+      border: 3px solid white;
+      background: #f1dcc0;
+      font-size: 14px;
+    }
+    .dot.now  { background: #c9742b; color: white; }     /* المفترق الحالي */
+    .dot.done { background: #b8e6a0; }                   /* طريق صحيح */
+    .dot.fail { background: #f5b5b0; }                   /* طريق مسدود */
+
+    /* بطاقة السؤال */
+    .question-card {
+      padding: 14px;
+      background: #fff3dc;
+      border: 4px solid white;
+      border-radius: 24px;
+    }
+    #question {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.6;
+    }
+
+    /* المتاهة: 4 طرق على شكل صليب */
+    .cross {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 82px);
+      gap: 8px;
+      direction: ltr;              /* مهم: باش اليمين يكون يمين واليسار يسار */
+      margin-top: 12px;
+    }
+    .up    { grid-column: 2; grid-row: 1; }
+    .left  { grid-column: 1; grid-row: 2; }
+    .right { grid-column: 3; grid-row: 2; }
+    .down  { grid-column: 2; grid-row: 3; }
+
+    /* الطريق (زر فيه الجواب) */
+    .road {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 4px;
+      direction: rtl;              /* الكتابة العربية من اليمين */
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: bold;
+      line-height: 1.3;
+      color: #5a3a1e;
+      background: #fff8ec;
+      border: 3px solid white;
+      border-radius: 18px;
+      box-shadow: 0 4px 0 #d9a56c;
+      cursor: pointer;
+    }
+    .road .arrow { font-size: 18px; }
+    .road.right-answer { background: #b8e6a0; box-shadow: 0 4px 0 #5aa83c; }
+    .road.wrong-answer { background: #f5b5b0; box-shadow: 0 4px 0 #d9534f; }
+
+    /* اللاعب فـ الوسط */
+    .player {
+      grid-column: 2;
+      grid-row: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      background: #eab883;
+      border-radius: 50%;
+      transition: transform 0.4s;
+    }
+
+    /* الزينة فـ الزوايا */
+    .corner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      opacity: 0.85;
+    }
+    .c1 { grid-column: 1; grid-row: 1; }
+    .c2 { grid-column: 3; grid-row: 1; }
+    .c3 { grid-column: 1; grid-row: 3; }
+    .c4 { grid-column: 3; grid-row: 3; }
+
+    #message {
+      min-height: 30px;
+      margin-top: 8px;
+      font-size: 18px;
+    }
+
+    .main-btn {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      padding: 12px;
+      font-size: 18px;
+      font-family: inherit;
+      color: white;
+      background: #c9742b;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+
+    /* شاشة النهاية (مخبية فالأول) */
+    #result {
+      display: none;
+      margin: auto 0;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      line-height: 2;
+      background: #fff3dc;
+      border: 4px solid white;
+      border-radius: 24px;
+    }
+    #resultText { font-size: 18px; }
+    .big { font-size: 40px; }
+  </style>
+  <link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+  <div class="game">
+
+    <!-- الشريط الفوقاني -->
+    <div class="top">
+      <div class="box" id="counter">المفترق 1 / 5</div>
+      <div class="box" dir="ltr">💎 <span id="earned">0</span></div>
+    </div>
+
+    <!-- اللعبة -->
+    <div class="center" id="quiz">
+      <div class="steps" id="steps"></div>
+
+      <div class="question-card">
+        <h2 id="question"></h2>
+      </div>
+
+      <!-- المتاهة (كتتصايب من JS) -->
+      <div class="cross" id="cross"></div>
+
+      <div id="message"></div>
+      <button class="main-btn" id="nextBtn" onclick="nextQuestion()" style="display:none">المفترق اللي من بعد</button>
+    </div>
+
+    <!-- شاشة النهاية (نجاح / خسارة / سالاو القلوب) -->
+    <div id="result">
+      <div class="big" id="bigText"></div>
+      <div id="resultText"></div>
+      <button class="main-btn" onclick="window.location.href='streak.html'">رجوع للخريطة</button>
+      <button class="main-btn" id="replayBtn" onclick="window.location.reload()">عاود اللعب</button>
+    </div>
+  </div>
+
+  <script src="progress.js"></script>
+  <script>
+    // ============================================
+    //  الأسئلة: هنا غادي تبدل أي حاجة بغيتي
+    //  question = السؤال (كل سؤال = مفترق طرق)
+    //  options  = 4 أجوبة بالضبط (كل جواب = طريق)
+    //  answer   = رقم الجواب الصحيح (1 = الأول، 2 = التاني، ...)
+    //  الطرق (فوق، تحت، يمين، يسار) كتتخلط وحدها فكل مرة
+    // ============================================
+    const questions = [
+      {
+        question: "ما هو المقاول؟",
+        options: ["شخص يشتري فقط", "شخص ينشئ ويدير مشروعاً", "شخص لا يعمل", " شخص يعمل موظفاً عند الآخرين فقط"],
+        answer: 2
+      },
+      {
+        question: "ما هي صفة المقاول الناجح؟",
+        options: [" الكسل وانتظار الحظ", " الإبداع والصبر", "الخوف من التجربة", "رفض النصائح"],
+        answer: 2
+      },
+      {
+        question: "كيف يساهم المشروع في المجتمع؟",
+        options: ["بنقصان الخدمات", " بزيادة البطالة دائماً", " بخلق فرص الشغل", "بمنع التجارة"],
+        answer: 3
+      },
+      {
+        question: "لماذا نقوم بدراسة السوق قبل إنشاء المشروع؟",
+        options: ["لزيادة المصاريف", "لمعرفة حاجيات الزبناء", "لتجنب المنافسة فقط", "لإضاعة الوقت"],
+        answer: 2
+      },
+      {
+        question: "ما الفائدة من تحقيق الاستقلال المالي عبر المشروع؟",
+        options: ["زيادة التبعية", "تدبير المداخيل والقرارات", "تجنب التخطيط", "التوقف عن التعلم"],
+        answer: 2
+      }
+    ];
+
+    const diamondsPerAnswer = 10;   // الألماس ديال كل طريق صحيح
+    const avatar = "🐸";            // اللاعب (تقدر تبدلو بأي إيموجي)
+
+    // الطرق الأربعة: السمية فـ CSS، السهم، وشحال كيتحرك اللاعب
+    const directions = [
+      { name: "up",    arrow: "⬆️", move: "translate(0px, -34px)" },
+      { name: "left",  arrow: "⬅️", move: "translate(-34px, 0px)" },
+      { name: "right", arrow: "➡️", move: "translate(34px, 0px)" },
+      { name: "down",  arrow: "⬇️", move: "translate(0px, 34px)" }
+    ];
+
+
+    // ============================================
+    //  المتغيرات
+    // ============================================
+    let current = 0;        // رقم المفترق الحالي (كيبدا من 0)
+    let score = 0;          // شحال من طريق صحيح
+    let answered = false;   // واش اختار طريق فهاد المفترق؟
+    let results = [];       // نتيجة كل مفترق: true = صحيح | false = مسدود
+    let roadDirections = []; // الاتجاه ديال كل جواب فـ المفترق الحالي
+
+
+    // كترسم الدوائر فوق (كل دائرة = مفترق)
+    function drawSteps() {
+      const steps = document.getElementById("steps");
+      steps.innerHTML = "";
+
+      for (let k = 0; k < questions.length; k++) {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        dot.textContent = k + 1;
+
+        if (results[k] === true) {
+          dot.classList.add("done");
+        } else if (results[k] === false) {
+          dot.classList.add("fail");
+        } else if (k === current) {
+          dot.classList.add("now");
+        }
+        steps.appendChild(dot);
+      }
+
+      // العلم فـ الآخر
+      const flag = document.createElement("div");
+      flag.textContent = "🚩";
+      steps.appendChild(flag);
+    }
+
+
+    // كتبين المفترق الحالي: السؤال + الطرق الأربعة
+    function showQuestion() {
+      answered = false;
+      const q = questions[current];
+
+      document.getElementById("question").textContent = q.question;
+      document.getElementById("counter").textContent = "المفترق " + (current + 1) + " / " + questions.length;
+      document.getElementById("message").textContent = "";
+      document.getElementById("nextBtn").style.display = "none";
+      drawSteps();
+
+      // كنخلطو الاتجاهات باش الجواب الصحيح ما يكونش دايما فنفس الطريق
+      roadDirections = directions.slice();
+      roadDirections.sort(function () { return Math.random() - 0.5; });
+
+      const cross = document.getElementById("cross");
+      cross.innerHTML = "";
+
+      // الزينة فـ الزوايا
+      const trees = ["🌸", "🍃", "🌸", "🍃"];
+      for (let c = 0; c < 4; c++) {
+        const corner = document.createElement("div");
+        corner.className = "corner c" + (c + 1);
+        corner.textContent = trees[c];
+        cross.appendChild(corner);
+      }
+
+      // اللاعب فـ الوسط
+      const player = document.createElement("div");
+      player.className = "player";
+      player.id = "player";
+      player.textContent = avatar;
+      cross.appendChild(player);
+
+      // الطرق الأربعة (كل جواب فـ طريق)
+      for (let i = 0; i < q.options.length; i++) {
+        const dir = roadDirections[i];
+        const road = document.createElement("button");
+        road.className = "road " + dir.name;
+        road.dataset.index = i;
+        road.innerHTML = '<span class="arrow">' + dir.arrow + '</span><span>' + q.options[i] + '</span>';
+        road.onclick = function () { chooseRoad(i); };
+        cross.appendChild(road);
+      }
+    }
+
+
+    // كتخدم ملي المستعمل كيختار طريق (i = رقم الجواب اللي اختار)
+    function chooseRoad(i) {
+      if (answered) return;
+      answered = true;
+
+      const correct = questions[current].answer - 1;     // رقم الجواب الصحيح
+      const roads = document.querySelectorAll(".road");
+
+      if (i === correct) {
+        // طريق صحيح: اللاعب كيتقدم فهاد الطريق
+        roads[i].classList.add("right-answer");
+        document.getElementById("player").style.transform = roadDirections[i].move;
+        results[current] = true;
+        score = score + 1;
+        addDiamonds(diamondsPerAnswer);
+        document.getElementById("earned").textContent = score * diamondsPerAnswer;
+        document.getElementById("message").textContent = "✅ طريق صحيح! +" + diamondsPerAnswer + " 💎";
+      } else {
+        // طريق مسدود: كنبينو الطريق الصحيح
+        roads[i].classList.add("wrong-answer");
+        roads[correct].classList.add("right-answer");
+        results[current] = false;
+        document.getElementById("message").textContent = "🚧 طريق مسدود";
+      }
+
+      drawSteps();
+      document.getElementById("nextBtn").style.display = "block";
+    }
+
+
+    // كتمشي للمفترق اللي من بعد، وإلا كملاو كتبين النتيجة
+    function nextQuestion() {
+      current = current + 1;
+      if (current < questions.length) {
+        showQuestion();
+      } else {
+        showResult();
+      }
+    }
+
+
+    // كتحسب النسبة: نجح (نجوم) ولا خسر (كتنقص قلب)
+    function showResult() {
+      const percent = score / questions.length * 100;
+      const stars = endLevel(4, percent);      // 0 = خسر | 1 و2 و3 = نجح
+      const resultLine = "لقيتي " + score + " طرق صحيحة من " + questions.length;
+
+      if (stars > 0) {
+        showEnd("★".repeat(stars) + "☆".repeat(3 - stars),
+                "🏁 وصلتي للنهاية!<br>" + resultLine + "<br>ربحتي " + (score * diamondsPerAnswer) + " 💎",
+                false);
+      } else {
+        const hearts = getHearts();
+        let message = "😢 ضعتي فالمتاهة<br>" + resultLine + "<br>فقدتي قلب 💔";
+        if (hearts > 0) {
+          message = message + "<br>باقي ليك " + hearts + " ❤️";
+        } else {
+          message = message + "<br>سالاو ليك القلوب! ستنى ساعة";
+        }
+        showEnd("💔", message, hearts > 0);
+      }
+    }
+
+
+    // كتبين شاشة النهاية
+    function showEnd(big, message, canReplay) {
+      document.getElementById("quiz").style.display = "none";
+      document.getElementById("result").style.display = "block";
+      document.getElementById("bigText").textContent = big;
+      document.getElementById("resultText").innerHTML = message;
+      document.getElementById("replayBtn").style.display = canReplay ? "block" : "none";
+    }
+
+
+    // كنبداو: إلا سالاو القلوب ما كندخلوش اللعبة
+    if (getHearts() === 0) {
+      showEnd("💔", "ما بقاو ليك قلوب.<br>رجع من بعد ساعة (العداد فـ الخريطة)", false);
+    } else {
+      showQuestion();
+    }
+  </script>
+</body>
+</html>

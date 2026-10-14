@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الدرس 1</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;       /* وسط من الطول */
+      justify-content: center;   /* وسط من العرض */
+      background: #d9a56c;
+      font-family: Tahoma, sans-serif;
+      color: #5a3a1e;
+    }
+
+    .game {
+      width: 100%;
+      max-width: 390px;
+      height: 700px;
+      max-height: 96vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      border-radius: 30px;
+      padding: 16px;
+      box-sizing: border-box;
+      background: linear-gradient(#f8dfb8, #eab883);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+    }
+    .box {
+      background: #fff3dc;
+      border: 3px solid white;
+      border-radius: 30px;
+      padding: 8px 16px;
+    }
+
+    .card {
+      margin: auto 0;
+      padding: 20px;
+      background: #fff3dc;
+      border-radius: 24px;
+      border: 4px solid white;
+    }
+    #question {
+      margin: 0 0 16px;
+      font-size: 22px;
+      line-height: 1.6;
+    }
+
+    .option {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 14px;
+      font-size: 18px;
+      font-family: inherit;
+      color: #5a3a1e;
+      background: white;
+      border: 3px solid #eab883;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+    .right { background: #b8e6a0; border-color: #5aa83c; }
+    .wrong { background: #f5b5b0; border-color: #d9534f; }
+
+    #message {
+      min-height: 30px;
+      font-size: 20px;
+      text-align: center;
+    }
+
+    .main-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 14px;
+      font-size: 20px;
+      font-family: inherit;
+      color: white;
+      background: #c9742b;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+
+    /* شاشة النهاية (مخبية فالأول) */
+    #result {
+      display: none;
+      text-align: center;
+      font-size: 22px;
+      line-height: 2;
+    }
+    .big { font-size: 40px; }
+  </style>
+  <link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+  <div class="game">
+
+    <div class="top">
+      <div class="box" id="counter">السؤال 1 / 5</div>
+      <div class="box">💎 <span id="earned">0</span></div>
+    </div>
+
+    <!-- بطاقة السؤال -->
+    <div class="card" id="quiz">
+      <h2 id="question"></h2>
+      <div id="options"></div>
+      <div id="message"></div>
+      <button class="main-btn" id="nextBtn" onclick="nextQuestion()" style="display:none">التالي</button>
+    </div>
+
+    <!-- شاشة النهاية (نجاح / خسارة / سالاو القلوب) -->
+    <div class="card" id="result">
+      <div class="big" id="bigText"></div>
+      <div id="resultText"></div>
+      <button class="main-btn" onclick="window.location.href='index.html'">رجوع للخريطة</button>
+      <button class="main-btn" id="replayBtn" onclick="window.location.reload()">عاود الدرس</button>
+    </div>
+  </div>
+
+  <script src="progress.js"></script>
+  <script>
+    // ============================================
+    //  الأسئلة: هنا غادي تبدل أي حاجة بغيتي
+    //  question = السؤال
+    //  options  = الأجوبة (تقدر تزيد أو تنقص)
+    //  answer   = رقم الجواب الصحيح (1 = الأول، 2 = التاني، ...)
+    // ============================================
+    const questions = [
+      {
+        question: "ما دور الابتكار في المقاولة؟",
+        options: ["تقليص عدد الزبناء", "تحقيق التميز والنمو", "توقيف الإنتاج", "تقليد المنافسين"],
+        answer: 2
+      },
+      {
+        question: "الابتكار هو؟",
+        options: ["نسخ أفكار الآخرين", "توليد أفكار فقط", "تحويل الأفكار لحلول ", "حفظ الأفكار"],
+        answer: 3
+      },
+      {
+        question: "الابتكار المقاولاتي هو؟",
+        options: ["تقليد منتوج قديم", "تطوير منتوج جديد", "توقيف الخدمة", "تقليص الجودة"],
+        answer: 2
+      },
+      {
+        question: "هدف الابتكار المقاولاتي؟",
+        options: ["تقليص الأجور", "تلبية حاجيات السوق", "تجنب الزبناء", "إغلاق المقاولة"],
+        answer: 2
+      },
+      {
+        question: "أي من هذه عائق للابتكار؟",
+        options: ["نقص التمويل", "كثرة الزبناء", "وفرة الموارد", "قوة الخبرة"],
+        answer: 1
+      }
+    ];
+
+    const diamondsPerAnswer = 10;   // الألماس ديال كل جواب صحيح
+
+    let current = 0;        // رقم السؤال الحالي (كيبدا من 0)
+    let score = 0;          // شحال من جواب صحيح
+    let answered = false;   // واش جاوب على هاد السؤال؟
+
+
+    // كتبين السؤال الحالي والأجوبة ديالو
+    function showQuestion() {
+      answered = false;
+      const q = questions[current];
+
+      document.getElementById("question").textContent = q.question;
+      document.getElementById("counter").textContent = "السؤال " + (current + 1) + " / " + questions.length;
+      document.getElementById("message").textContent = "";
+      document.getElementById("nextBtn").style.display = "none";
+
+      const optionsBox = document.getElementById("options");
+      optionsBox.innerHTML = "";
+
+      for (let i = 0; i < q.options.length; i++) {
+        const button = document.createElement("button");
+        button.textContent = q.options[i];
+        button.className = "option";
+        button.onclick = function () { chooseAnswer(i); };
+        optionsBox.appendChild(button);
+      }
+    }
+
+
+    // كتخدم ملي المستعمل كيختار جواب (i = رقم الجواب اللي اختار)
+    function chooseAnswer(i) {
+      if (answered) return;
+      answered = true;
+
+      const correct = questions[current].answer - 1;
+      const buttons = document.querySelectorAll(".option");
+
+      if (i === correct) {
+        buttons[i].classList.add("right");
+        score = score + 1;
+        addDiamonds(diamondsPerAnswer);
+        document.getElementById("earned").textContent = score * diamondsPerAnswer;
+        document.getElementById("message").textContent = "✅ صحيح! +" + diamondsPerAnswer + " 💎";
+      } else {
+        buttons[i].classList.add("wrong");
+        buttons[correct].classList.add("right");
+        document.getElementById("message").textContent = "❌ خاطئ";
+      }
+
+      document.getElementById("nextBtn").style.display = "block";
+    }
+
+
+    // كتمشي للسؤال اللي من بعد، وإلا كملاو كتبين النتيجة
+    function nextQuestion() {
+      current = current + 1;
+      if (current < questions.length) {
+        showQuestion();
+      } else {
+        showResult();
+      }
+    }
+
+
+    // كتحسب النسبة: نجح (نجوم) ولا خسر (كتنقص قلب)
+    function showResult() {
+      const percent = score / questions.length * 100;
+      const stars = endLevel(1, percent);      // 0 = خسر | 1 و2 و3 = نجح
+      const resultLine = "نتيجتك: " + score + " / " + questions.length;
+
+      if (stars > 0) {
+        // نجح
+        showEnd("★".repeat(stars) + "☆".repeat(3 - stars),
+                "🎉 نجحتي!<br>" + resultLine + "<br>ربحتي " + (score * diamondsPerAnswer) + " 💎",
+                false);
+      } else {
+        // خسر: القلب تنقص، كنشوفو شحال بقا
+        const hearts = getHearts();
+        let message = "😢 خسرتي الدرس<br>" + resultLine + "<br>فقدتي قلب 💔";
+        if (hearts > 0) {
+          message = message + "<br>باقي ليك " + hearts + " ❤️";
+        } else {
+          message = message + "<br>سالاو ليك القلوب! ستنى ساعة";
+        }
+        showEnd("💔", message, hearts > 0);
+      }
+    }
+
+
+    // كتبين شاشة النهاية: big = الرمز الكبير، message = الكلام، canReplay = واش نبينو زر العاود
+    function showEnd(big, message, canReplay) {
+      document.getElementById("quiz").style.display = "none";
+      document.getElementById("result").style.display = "block";
+      document.getElementById("bigText").textContent = big;
+      document.getElementById("resultText").innerHTML = message;
+      document.getElementById("replayBtn").style.display = canReplay ? "block" : "none";
+    }
+
+
+    // كنبداو: إلا سالاو القلوب ما كندخلوش اللعبة
+    if (getHearts() === 0) {
+      showEnd("💔", "ما بقاو ليك قلوب.<br>رجع من بعد ساعة (العداد فـ الخريطة)", false);
+    } else {
+      showQuestion();
+    }
+  </script>
+</body>
+</html>
